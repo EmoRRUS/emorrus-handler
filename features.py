@@ -35,7 +35,7 @@ def extract_features(eeg: np.ndarray, bvp: np.ndarray) -> np.ndarray:
         features.append(float(bvp.std()))
         features.append(float(np.percentile(bvp, 25)))
         features.append(float(np.percentile(bvp, 75)))
-        # HRV proxy — std of di
+        # HRV proxy — std of differe
         features.append(float(np.diff(bvp).std()))
     else:
         features.extend([0.0] * 5)
