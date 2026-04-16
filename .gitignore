@@ -1,8 +1,17 @@
-﻿__pycache__/
-*.pyc
+
+
+# Python
+__pycache__/
+*.py[cod]
 *.pyo
-*.pth
-*.pt
-*.h5
-*.pkl
+*.egg-info/
 .env
+venv/
+.venv/
+
+# Patch/temp scripts
+patch_handler.py
+
+# OS
+.DS_Store
+Thumbs.db
