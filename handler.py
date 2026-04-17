@@ -111,24 +111,22 @@ def handler(event):
             })
 
         response = {
-            "output": {
-                "emotion":    LABEL_DISPLAY[trial_pred_label],
-                "confidence": round(trial_conf, 4),
-                "scores": {
-                    "neutral":    round(float(mean_prob[0]), 4),
-                    "enthusiasm": round(float(mean_prob[1]), 4),
-                    "sadness":    round(float(mean_prob[2]), 4),
-                    "fear":       round(float(mean_prob[3]), 4),
-                },
-                "n_windows": len(windows),
-                "windows":   windows,
-            }
+            "emotion":    LABEL_DISPLAY[trial_pred_label],
+            "confidence": round(trial_conf, 4),
+            "scores": {
+                "neutral":    round(float(mean_prob[0]), 4),
+                "enthusiasm": round(float(mean_prob[1]), 4),
+                "sadness":    round(float(mean_prob[2]), 4),
+                "fear":       round(float(mean_prob[3]), 4),
+            },
+            "n_windows": len(windows),
+            "windows":   windows,
         }
 
         true_label = parse_true_label_from_infer_trial_key(trial_key)
         if true_label:
-            response["output"]["true_emotion"] = LABEL_DISPLAY[true_label]
-            response["output"]["correct"]      = (true_label == trial_pred_label)
+            response["true_emotion"] = LABEL_DISPLAY[true_label]
+            response["correct"]      = (true_label == trial_pred_label)
 
         return response
 
