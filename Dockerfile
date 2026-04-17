@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source files
 COPY preprocess.py .
+COPY client.py .
 COPY handler.py .
 COPY model_artifacts/ ./model_artifacts/
 

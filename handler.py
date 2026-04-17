@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import runpod
 
+from client import build_eeg_csv, build_ppg_csv
 from preprocess import (
     EEG_CHANNELS, BAND_CHANNELS,
     IDX_TO_LABEL, EMOTION_LABELS, NUM_CLASSES,
@@ -78,7 +79,15 @@ def handler(event):
         trial_key = job_input.get("trial_key", "unknown_trial")
 
         if not eeg_b64 or not ppg_b64:
-            return {"error": "Both 'eeg_csv' and 'ppg_csv' (base64-encoded) are required."}
+            eeg_list = job_input.get("eeg")
+            bvp_list = job_input.get("bvp")
+            if eeg_list is None or bvp_list is None:
+                return {"error": "Provide either 'eeg_csv'+'ppg_csv' (base64) or 'eeg'+'bvp' (raw arrays)."}
+            bvp_sr  = float(job_input.get("bvp_sr", 25.0))
+            eeg_4ch = np.array(eeg_list, dtype=np.float32)
+            bvp     = np.array(bvp_list, dtype=np.float32)
+            eeg_b64 = base64.b64encode(build_eeg_csv(eeg_4ch)).decode("utf-8")
+            ppg_b64 = base64.b64encode(build_ppg_csv(bvp, bvp_sr)).decode("utf-8")
 
         eeg_df = pd.read_csv(io.BytesIO(base64.b64decode(eeg_b64)))
         ppg_df = pd.read_csv(io.BytesIO(base64.b64decode(ppg_b64)))
