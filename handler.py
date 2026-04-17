@@ -16,8 +16,6 @@ from preprocess import (
     compute_band_arr,
 )
 
-# ── Model load ─────────────────────────────────────────
-#model Load
 MODEL_PATH = os.environ.get("MODEL_PATH", "/app/model_artifacts/lda_model.pkl")
 print(f"[startup] Loading model from {MODEL_PATH} ...")
 with open(MODEL_PATH, "rb") as f:
@@ -27,7 +25,6 @@ _clf               = _artifacts["final_clf"]
 _final_feature_idx = _artifacts["final_feature_idx"]
 print(f"[startup] Model loaded. K={_artifacts['FINAL_K']}, shrinkage={_artifacts['FINAL_SH']}")
 
-# ── Label mapping: internal UPPERCASE -> output lowercase ────────
 LABEL_DISPLAY = {
     "NEUTRAL":    "neutral",
     "ENTHUSIASM": "enthusiasm",
@@ -35,7 +32,6 @@ LABEL_DISPLAY = {
     "FEAR":       "fear",
 }
 
-# ── Inference helper ─────────────────────────────────────────────
 def _predict_trial(eeg_df: pd.DataFrame, ppg_df: pd.DataFrame):
     missing_eeg = [c for c in EEG_CHANNELS + BAND_CHANNELS if c not in eeg_df.columns]
     if missing_eeg:
@@ -71,7 +67,6 @@ def _predict_trial(eeg_df: pd.DataFrame, ppg_df: pd.DataFrame):
     return trial_pred_idx, trial_conf, mean_prob, preds, probs, meta_list
 
 
-# ── RunPod handler ───────────────────────────────────────────────
 def handler(event):
     try:
         job_input = event.get("input", {})
@@ -91,16 +86,14 @@ def handler(event):
             missing  = [c for c in raw_cols if c not in eeg_df.columns]
             if missing:
                 return {"error": f"EEG CSV missing raw columns: {missing}"}
-            eeg_4ch   = np.stack([eeg_df[c].values.astype(np.float32) for c in raw_cols], axis=0)
-            band_arr  = compute_band_arr(eeg_4ch)  # (20, N)
+            eeg_4ch  = np.stack([eeg_df[c].values.astype(np.float32) for c in raw_cols], axis=0)
+            band_arr = compute_band_arr(eeg_4ch)  # (20, N)
             for i, col in enumerate(BAND_CHANNELS):
                 eeg_df[col] = band_arr[i]
 
-        trial_pred_idx, trial_conf, mean_prob, preds, probs, meta_list =             _predict_trial(eeg_df, ppg_df)
-
+        trial_pred_idx, trial_conf, mean_prob, preds, probs, meta_list = _predict_trial(eeg_df, ppg_df)
         trial_pred_label = IDX_TO_LABEL[trial_pred_idx]
 
-        # Per-window results
         windows = []
         for i, m in enumerate(meta_list):
             win_label = IDX_TO_LABEL[int(preds[i])]
@@ -117,7 +110,6 @@ def handler(event):
                 },
             })
 
-        # Top-level response
         response = {
             "output": {
                 "emotion":    LABEL_DISPLAY[trial_pred_label],
@@ -133,7 +125,6 @@ def handler(event):
             }
         }
 
-        # Optional ground-truth echo (when trial_key starts with an emotion name)
         true_label = parse_true_label_from_infer_trial_key(trial_key)
         if true_label:
             response["output"]["true_emotion"] = LABEL_DISPLAY[true_label]
@@ -145,6 +136,5 @@ def handler(event):
         return {"error": str(e), "traceback": traceback.format_exc()}
 
 
-# ── Entry point ──────────────────────────────────────────────────
 if __name__ == "__main__":
     runpod.serverless.start({"handler": handler})
