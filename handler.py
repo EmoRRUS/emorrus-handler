@@ -16,7 +16,8 @@ from preprocess import (
     compute_band_arr,
 )
 
-# ── Model load ──────────────────────────────────────────────────
+# ── Model load ─────────────────────────────────────────
+#model Load
 MODEL_PATH = os.environ.get("MODEL_PATH", "/app/model_artifacts/lda_model.pkl")
 print(f"[startup] Loading model from {MODEL_PATH} ...")
 with open(MODEL_PATH, "rb") as f:
