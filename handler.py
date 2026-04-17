@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import runpod
 
-from client import build_eeg_csv, build_ppg_csv
 from preprocess import (
     EEG_CHANNELS, BAND_CHANNELS,
     IDX_TO_LABEL, EMOTION_LABELS, NUM_CLASSES,
@@ -14,6 +13,7 @@ from preprocess import (
     parse_true_label_from_infer_trial_key,
     trial_vote_from_probs,
     window_trial_to_features,
+    compute_band_arr,
 )
 
 # ── Model load ──────────────────────────────────────────────────
@@ -79,18 +79,21 @@ def handler(event):
         trial_key = job_input.get("trial_key", "unknown_trial")
 
         if not eeg_b64 or not ppg_b64:
-            eeg_list = job_input.get("eeg")
-            bvp_list = job_input.get("bvp")
-            if eeg_list is None or bvp_list is None:
-                return {"error": "Provide either 'eeg_csv'+'ppg_csv' (base64) or 'eeg'+'bvp' (raw arrays)."}
-            bvp_sr  = float(job_input.get("bvp_sr", 25.0))
-            eeg_4ch = np.array(eeg_list, dtype=np.float32)
-            bvp     = np.array(bvp_list, dtype=np.float32)
-            eeg_b64 = base64.b64encode(build_eeg_csv(eeg_4ch)).decode("utf-8")
-            ppg_b64 = base64.b64encode(build_ppg_csv(bvp, bvp_sr)).decode("utf-8")
+            return {"error": "Both 'eeg_csv' and 'ppg_csv' (base64-encoded) are required."}
 
         eeg_df = pd.read_csv(io.BytesIO(base64.b64decode(eeg_b64)))
         ppg_df = pd.read_csv(io.BytesIO(base64.b64decode(ppg_b64)))
+
+        # Compute band powers from raw EEG if not already present
+        if not any(c in eeg_df.columns for c in BAND_CHANNELS):
+            raw_cols = ["RAW_TP9", "RAW_AF7", "RAW_AF8", "RAW_TP10"]
+            missing  = [c for c in raw_cols if c not in eeg_df.columns]
+            if missing:
+                return {"error": f"EEG CSV missing raw columns: {missing}"}
+            eeg_4ch   = np.stack([eeg_df[c].values.astype(np.float32) for c in raw_cols], axis=0)
+            band_arr  = compute_band_arr(eeg_4ch)  # (20, N)
+            for i, col in enumerate(BAND_CHANNELS):
+                eeg_df[col] = band_arr[i]
 
         trial_pred_idx, trial_conf, mean_prob, preds, probs, meta_list =             _predict_trial(eeg_df, ppg_df)
 
