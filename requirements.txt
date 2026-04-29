@@ -4,3 +4,5 @@ pandas>=2.0
 scikit-learn>=1.3
 PyWavelets>=1.4
 runpod>=1.6
+mne>=1.5
+asrpy>=0.0.3

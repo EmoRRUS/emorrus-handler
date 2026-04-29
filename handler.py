@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 import runpod
 
+from asr_cleaner import init_asr, clean_eeg
+
 from preprocess import (
     EEG_CHANNELS, BAND_CHANNELS,
     IDX_TO_LABEL, EMOTION_LABELS, NUM_CLASSES,
@@ -24,6 +26,10 @@ _vt                = _artifacts["vt"]
 _clf               = _artifacts["final_clf"]
 _final_feature_idx = _artifacts["final_feature_idx"]
 print(f"[startup] Model loaded. K={_artifacts['FINAL_K']}, shrinkage={_artifacts['FINAL_SH']}")
+
+# Fit ASR once at startup from the pre-recorded clean calibration file
+_asr_ready = init_asr()
+print(f"[startup] ASR ready: {_asr_ready}")
 
 LABEL_DISPLAY = {
     "NEUTRAL":    "neutral",
@@ -86,7 +92,11 @@ def handler(event):
             missing  = [c for c in raw_cols if c not in eeg_df.columns]
             if missing:
                 return {"error": f"EEG CSV missing raw columns: {missing}"}
-            eeg_4ch  = np.stack([eeg_df[c].values.astype(np.float32) for c in raw_cols], axis=0)
+            eeg_4ch = np.stack([eeg_df[c].values.astype(np.float32) for c in raw_cols], axis=0)
+
+            # ── ASR artifact removal (applied before band-power extraction) ──
+            eeg_4ch = clean_eeg(eeg_4ch)   # no-op if ASR unavailable
+
             band_arr = compute_band_arr(eeg_4ch)  # (20, N)
             for i, col in enumerate(BAND_CHANNELS):
                 eeg_df[col] = band_arr[i]
