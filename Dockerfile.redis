@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Only what the Redis handler needs
+COPY requirements_redis.txt .
+RUN pip install --no-cache-dir -r requirements_redis.txt
+
+COPY handler_redis.py .
+
+# REDIS_URL must be set as a RunPod secret / environment variable
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "-u", "handler_redis.py"]
